@@ -95,92 +95,101 @@ if(!class_exists('WP_Git_Embed')) {
       }
 
       if(!empty($raw)) {
+        /**
+
+        */
 
         $link = $raw;
 
-        $raw = file_get_contents($raw);
+        if( false !== ( $raw = get_transient( $link ) ) ) {
+            return $raw;
+        } else {
+          $raw = file_get_contents($raw);
 
-        // GitHub (Custom Ruby Immersion) - https://github.com/gbaptista/ruby-immersion
-        if(preg_match('/^\[ruby_code:.*\]/', $code)) {
-          $raw = preg_replace("/\# encoding\: utf\-8\n{2,}|^\n{1,}/", '', $raw);
-        }
-
-        // GitHub (Custom Ruby Immersion Test) - https://github.com/gbaptista/ruby-immersion
-        elseif(preg_match('/^\[ruby_test:.*\]/', $code)) {
-          $raw = str_replace("require 'test/unit'", '', $raw);
-          $raw = str_replace("require 'include_file'", '', $raw);
-          $raw = str_replace("IncludeFile::inject __FILE__", '', $raw);
-          $raw = preg_replace("/class LoveTest.* \< Test\:\:Unit\:\:TestCase/", '', $raw);
-          $raw = str_replace("def test_with_love", '', $raw);
-          $raw = preg_replace("/end$/", '', trim($raw));
-          $raw = preg_replace("/end$/", '', trim($raw));
-          $raw = preg_replace("/    /", '', trim($raw));
-          $raw = preg_replace("/\n{2,}/", "\n\n", trim($raw));
-          $raw = preg_replace("/\# encoding\: utf\-8/", '', trim($raw));
-          $raw = preg_replace("/^\n{1,}/", '', trim($raw));
-        }
-
-        if(!empty($s_line))
-          $raw = implode("\n", array_slice(preg_split('/\r\n|\r|\n/', $raw), $s_line-1, ($e_line-$s_line)+1));
-        else {
-          $s_line = 1;
-        }
-
-        if(!empty($format)) {
-           if(preg_match('/^precode.*/', $format)) {
-            $format = explode('_', $format);
-            $raw = '<pre class="language-'. $format[1] .'"><code class="language-'. $format[1] .'" line="'.$s_line.'">' . $raw . '</code></pre>';
-            $links = TRUE;
-            $format = 'pre';
-          } elseif(preg_match('/^pre.*/', $format)) {
-            $format = explode('_', $format);
-            $raw = '<pre lang="'. $format[1] .'" line="'.$s_line.'">' . $raw . '</pre>';
-            $links = TRUE;
-            $format = 'pre';
-          } elseif(preg_match('/^sourcecode.*/', $format)) {
-            $format = explode('_', $format);
-            $raw = '[sourcecode language="'.$format[1].'"]' . $raw . '[/sourcecode]';
-            $links = TRUE;
-            $format = 'sourcecode';
-          } else {
-            $links = FALSE;
+          // GitHub (Custom Ruby Immersion) - https://github.com/gbaptista/ruby-immersion
+          if(preg_match('/^\[ruby_code:.*\]/', $code)) {
+            $raw = preg_replace("/\# encoding\: utf\-8\n{2,}|^\n{1,}/", '', $raw);
           }
-        } else $links = FALSE;
 
-        if($links) {
+          // GitHub (Custom Ruby Immersion Test) - https://github.com/gbaptista/ruby-immersion
+          elseif(preg_match('/^\[ruby_test:.*\]/', $code)) {
+            $raw = str_replace("require 'test/unit'", '', $raw);
+            $raw = str_replace("require 'include_file'", '', $raw);
+            $raw = str_replace("IncludeFile::inject __FILE__", '', $raw);
+            $raw = preg_replace("/class LoveTest.* \< Test\:\:Unit\:\:TestCase/", '', $raw);
+            $raw = str_replace("def test_with_love", '', $raw);
+            $raw = preg_replace("/end$/", '', trim($raw));
+            $raw = preg_replace("/end$/", '', trim($raw));
+            $raw = preg_replace("/    /", '', trim($raw));
+            $raw = preg_replace("/\n{2,}/", "\n\n", trim($raw));
+            $raw = preg_replace("/\# encoding\: utf\-8/", '', trim($raw));
+            $raw = preg_replace("/^\n{1,}/", '', trim($raw));
+          }
 
-          $file_name = preg_replace('/#.*/', '', end(preg_split('/\/|\\\/', $link)));
-          $file_name = preg_replace('/\?.*/', '', $file_name);
+          if(!empty($s_line))
+            $raw = implode("\n", array_slice(preg_split('/\r\n|\r|\n/', $raw), $s_line-1, ($e_line-$s_line)+1));
+          else {
+            $s_line = 1;
+          }
 
-          //echo $source . '<br />' . $link; exit;
-
-          if($format == 'pre' || $format == 'precode')
-           $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; background-color:#def; border:1px solid #CCC; text-align:right; width:99%; margin-top:-21px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
-          else
-            $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; border:1px solid #CCC; text-align:right; width:99%; margin-top:-13px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
-
-          if(preg_match('/^http.*:/', $link)) {
-
-            if(empty($source))
-              $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">download file</a>';
-            else {
-              $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">view raw</a>';
-              $raw .= '<a style="display:inline-block; padding:4px 6px; float:left;" href="' . $source . '" target="_blank">view file on ';
-
-              if($service == 'github') $raw .= '<strong>GitHub</strong></a>';
-              elseif($service == 'gist') $raw .= '<strong>GitHub Gist</strong></a>';
-              elseif($service == 'bitbucket') $raw .= ' <strong>Bitbucket</strong></a>';
+          if(!empty($format)) {
+             if(preg_match('/^precode.*/', $format)) {
+              $format = explode('_', $format);
+              $raw = '<pre class="language-'. $format[1] .'"><code class="language-'. $format[1] .'" line="'.$s_line.'">' . $raw . '</code></pre>';
+              $links = TRUE;
+              $format = 'pre';
+            } elseif(preg_match('/^pre.*/', $format)) {
+              $format = explode('_', $format);
+              $raw = '<pre lang="'. $format[1] .'" line="'.$s_line.'">' . $raw . '</pre>';
+              $links = TRUE;
+              $format = 'pre';
+            } elseif(preg_match('/^sourcecode.*/', $format)) {
+              $format = explode('_', $format);
+              $raw = '[sourcecode language="'.$format[1].'"]' . $raw . '[/sourcecode]';
+              $links = TRUE;
+              $format = 'sourcecode';
+            } else {
+              $links = FALSE;
             }
-            
+          } else $links = FALSE;
+
+          if($links) {
+
+            $file_name = preg_replace('/#.*/', '', end(preg_split('/\/|\\\/', $link)));
+            $file_name = preg_replace('/\?.*/', '', $file_name);
+
+            //echo $source . '<br />' . $link; exit;
+
+            if($format == 'pre' || $format == 'precode')
+             $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; background-color:#def; border:1px solid #CCC; text-align:right; width:99%; margin-top:-21px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
+            else
+              $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; border:1px solid #CCC; text-align:right; width:99%; margin-top:-13px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
+
+            if(preg_match('/^http.*:/', $link)) {
+
+              if(empty($source))
+                $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">download file</a>';
+              else {
+                $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">view raw</a>';
+                $raw .= '<a style="display:inline-block; padding:4px 6px; float:left;" href="' . $source . '" target="_blank">view file on ';
+
+                if($service == 'github') $raw .= '<strong>GitHub</strong></a>';
+                elseif($service == 'gist') $raw .= '<strong>GitHub Gist</strong></a>';
+                elseif($service == 'bitbucket') $raw .= ' <strong>Bitbucket</strong></a>';
+              }
+              
+            }
+
+            $raw .= '</div>';
+            set_transient( $link, $raw, HOUR_IN_SECONDS );
           }
-
-          $raw .= '</div>';
-
         }
-
         return $raw;
         # return $raw .= "\n\n# $source"; # Todo.
 
+      /**
+
+      */
       } else return $code;
 
     }
