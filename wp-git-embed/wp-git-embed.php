@@ -30,7 +30,15 @@ if(!class_exists('WP_Git_Embed')) {
     
 
     private static function raw($code) {
+      /**
 
+      */
+      $nomtransient = '_code_' . substr( md5( $code ), 0, 29 );
+      // echo $nomtransient;
+      if( false === apply_filters( 'cache_embeded_code', ( $raw = get_transient( $nomtransient ) ) ) ) {
+      /**
+
+      */
       if(preg_match('/\{[0-9].*\}/', $code, $lines)) {
         list($s_line, $e_line) = explode(':', preg_replace('/\{|\}/', '', $lines[0]));
         if(empty($e_line)) $e_line = $s_line;
@@ -46,24 +54,8 @@ if(!class_exists('WP_Git_Embed')) {
 
       }
 
-      // GitHub (Custom Ruby Immersion) - https://github.com/gbaptista/ruby-immersion
-      if(preg_match('/^\[ruby_code:.*\]/', $code)) {
-        $path = explode('[ruby_code:', $code);
-        $path = explode('/', preg_replace('/\]$/', '', $path[1]));
-        if(strlen($path[1]) == 1) $path[1] = '0'.$path[1];
-        $file = '[git:https://github.com/gbaptista/ruby-immersion/blob/master/lib/'.$path[0].'/'.$path[1].'.rb]';
-      }
-
-      // GitHub (Custom Ruby Immersion Test) - https://github.com/gbaptista/ruby-immersion
-      elseif(preg_match('/^\[ruby_test:.*\]/', $code)) {
-        $path = explode('[ruby_test:', $code);
-        $path = explode('/', preg_replace('/\]$/', '', $path[1]));
-        if(strlen($path[1]) == 1) $path[1] = '0'.$path[1];
-        $file = '[git:https://github.com/gbaptista/ruby-immersion/blob/master/test/'.$path[0].'/test_'.$path[1].'.rb]';
-      }
-
       // Default
-      else $file = $code;
+      $file = $code;
 
       // GitHub - https://github.com/
       if(preg_match('/:\/\/github.com/', $file)) {
@@ -95,36 +87,15 @@ if(!class_exists('WP_Git_Embed')) {
       }
 
       if(!empty($raw)) {
-        /**
 
-        */
-
+        // echo '2'.$nom;
         $link = $raw;
 
-        if( false !== ( $raw = get_transient( $link ) ) ) {
-            return $raw;
-        } else {
           $raw = file_get_contents($raw);
-
-          // GitHub (Custom Ruby Immersion) - https://github.com/gbaptista/ruby-immersion
-          if(preg_match('/^\[ruby_code:.*\]/', $code)) {
-            $raw = preg_replace("/\# encoding\: utf\-8\n{2,}|^\n{1,}/", '', $raw);
-          }
-
-          // GitHub (Custom Ruby Immersion Test) - https://github.com/gbaptista/ruby-immersion
-          elseif(preg_match('/^\[ruby_test:.*\]/', $code)) {
-            $raw = str_replace("require 'test/unit'", '', $raw);
-            $raw = str_replace("require 'include_file'", '', $raw);
-            $raw = str_replace("IncludeFile::inject __FILE__", '', $raw);
-            $raw = preg_replace("/class LoveTest.* \< Test\:\:Unit\:\:TestCase/", '', $raw);
-            $raw = str_replace("def test_with_love", '', $raw);
-            $raw = preg_replace("/end$/", '', trim($raw));
-            $raw = preg_replace("/end$/", '', trim($raw));
-            $raw = preg_replace("/    /", '', trim($raw));
-            $raw = preg_replace("/\n{2,}/", "\n\n", trim($raw));
-            $raw = preg_replace("/\# encoding\: utf\-8/", '', trim($raw));
-            $raw = preg_replace("/^\n{1,}/", '', trim($raw));
-          }
+          // $raw = preg_replace("/\<\/script\>/", '&lt;/script&gt;', trim($raw));
+          // $raw = preg_replace("/\<script(.*)\>/", '&lt;script$1&gt;', trim($raw));
+          $raw = preg_replace("/\</", '&lt;', trim($raw));
+          $raw = preg_replace("/\>/", '&gt;', trim($raw));
 
           if(!empty($s_line))
             $raw = implode("\n", array_slice(preg_split('/\r\n|\r|\n/', $raw), $s_line-1, ($e_line-$s_line)+1));
@@ -161,17 +132,17 @@ if(!class_exists('WP_Git_Embed')) {
             //echo $source . '<br />' . $link; exit;
 
             if($format == 'pre' || $format == 'precode')
-             $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; background-color:#def; border:1px solid #CCC; text-align:right; width:99%; margin-top:-21px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
+             $raw .= '<div class="wp-git-embed"><span class="filename">'.$file_name.'</span>';
             else
-              $raw .= '<div class="wp-git-embed" style="margin-bottom:10px; border:1px solid #CCC; text-align:right; width:99%; margin-top:-13px; font-size:11px; font-style:italic;"><span style="display:inline-block; padding:4px;">'.$file_name.'</span>';
+              $raw .= '<div class="wp-git-embed"><span class="filename">'.$file_name.'</span>';
 
             if(preg_match('/^http.*:/', $link)) {
 
               if(empty($source))
-                $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">download file</a>';
+                $raw .= '<a class="github" href="' . $link . '" target="_blank">download file</a>';
               else {
-                $raw .= '<a style="display:inline-block; padding:4px 6px;" href="' . $link . '" target="_blank">view raw</a>';
-                $raw .= '<a style="display:inline-block; padding:4px 6px; float:left;" href="' . $source . '" target="_blank">view file on ';
+                $raw .= '<a class="raw" href="' . $link . '" target="_blank">view raw</a>';
+                $raw .= '<a class="github" href="' . $source . '" target="_blank">view file on ';
 
                 if($service == 'github') $raw .= '<strong>GitHub</strong></a>';
                 elseif($service == 'gist') $raw .= '<strong>GitHub Gist</strong></a>';
@@ -181,9 +152,11 @@ if(!class_exists('WP_Git_Embed')) {
             }
 
             $raw .= '</div>';
-            set_transient( $link, $raw, HOUR_IN_SECONDS );
+            
           }
-        }
+          set_transient( $nomtransient, htmlspecialchars( $raw ), 3600 );
+          // echo '1'.$nom;
+        
         return $raw;
         # return $raw .= "\n\n# $source"; # Todo.
 
@@ -191,6 +164,9 @@ if(!class_exists('WP_Git_Embed')) {
 
       */
       } else return $code;
+      } else {
+          return htmlspecialchars_decode( $raw );
+      }
 
     }
 
@@ -223,8 +199,10 @@ if(!class_exists('WP_Git_Embed')) {
   add_action( 'plugins_loaded', 'WP_Git_Embed' );
 
   function enqueue_prismjs(){
+      // wp_register_script( 'showinvisible', GITPLUGINURL.'/show-invisibles/prism-show-invisibles.min.js', array('jquery'), '0.9', true );
       wp_register_script( 'prismjs', GITPLUGINURL.'/js/prism.js', array('jquery'), '0.9', true );
-      wp_register_style( 'prismcss', GITPLUGINURL.'/css/' . apply_filters( 'prism_css', 'prism' ) . '.css', false, '0.9', 'all' );
+      wp_register_style( 'prismcss', GITPLUGINURL.'/css/' . apply_filters( 'prism_css', 'prism' ) . '.css', false, '0.95', 'all' );
+      // wp_register_style( 'prismshowinvisiblecss', GITPLUGINURL.'/show-invisibles/prism-show-invisibles.css', false, '0.9', 'all' );
       wp_enqueue_style( 'prismcss' );
       wp_enqueue_script( 'jquery' );
       wp_enqueue_script( 'prismjs' );
